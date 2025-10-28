@@ -67,7 +67,7 @@ const Header: React.FC = () => {
           {/* Тънка инфолента */}
           <div className="hidden lg:flex items-center justify-between h-10 px-4 sm:px-6 lg:px-8 text-sm text-gray-700 border-b border-sand/20">
             <div className="flex items-center gap-5">
-              <span className="whitespace-nowrap">Над 95% позитивни отзиви</span>
+              <span className="whitespace-nowrap">95% позитивни отзиви</span>
               <span className="hidden xl:inline">Обработваме поръчките веднага</span>
               <span className="hidden xl:inline">SSL криптирана защита</span>
             </div>
