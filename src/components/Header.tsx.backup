@@ -1,0 +1,344 @@
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { ShoppingBag, Menu, X, Search as SearchIcon, ChevronDown, User } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useCart } from '../context/CartContext';
+
+const LOGO_URL = "https://i.ibb.co/S70rh1nm/lohonavbar.webp";
+const RATE_BGN_PER_EUR = 1.95583; // 1 EUR = 1.95583 BGN
+
+const Header: React.FC = () => {
+  const location = useLocation();
+  const { state, openCart } = useCart();
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isShopOpen, setIsShopOpen] = React.useState(false);
+  const [isLangOpen, setIsLangOpen] = React.useState(false);
+  const langRef = React.useRef<HTMLDivElement | null>(null);
+
+  const isActive = (path: string) => location.pathname.startsWith(path);
+  const isEN = location.pathname.startsWith('/en');
+
+  // СКРИЙ търсачката на всички продуктови страници (/books/:slug, /en/books/:slug)
+  const isProductDetailPage = React.useMemo(
+    () => /^\/(?:en\/)?books\/[^\/]+(?:\/|$)/i.test(location.pathname),
+    [location.pathname]
+  );
+
+  React.useEffect(() => { setIsShopOpen(false); }, [location.pathname]);
+
+  React.useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) setIsLangOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsLangOpen(false); };
+    document.addEventListener('click', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('click', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, []);
+
+  const { totalBGN, totalEUR, totalQty } = React.useMemo(() => {
+    const items = Array.isArray(state?.items) ? state.items : [];
+    const totalBGNRaw = items.reduce((sum: number, item: any) => {
+      const price = typeof item?.priceBGN === 'number' ? item.priceBGN :
+                    (typeof item?.price === 'number' ? item.price : 0);
+      const qty = typeof item?.quantity === 'number' ? item.quantity : 0;
+      return sum + price * qty;
+    }, 0);
+    const totalEURRaw = totalBGNRaw > 0 ? totalBGNRaw / RATE_BGN_PER_EUR : 0;
+    const qtySum = items.reduce((s: number, it: any) => s + (typeof it?.quantity === 'number' ? it.quantity : 0), 0);
+    return { totalBGN: totalBGNRaw, totalEUR: totalEURRaw, totalQty: qtySum };
+  }, [state?.items]);
+
+  const fmtBGN = (n: number) => `${n.toFixed(2)}ЛВ`;
+  const fmtEUR = (n: number) => `${n.toFixed(2)}€`;
+
+  return (
+    <>
+      <header className="sticky top-0 z-50">
+        <div className="relative bg-white/95 backdrop-blur-sm border-b border-sand/20">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-6 bg-teal rounded-b-lg shadow-sm" />
+
+          <div className="hidden lg:flex items-center justify-between h-10 px-4 sm:px-6 lg:px-8 text-sm text-gray-700 border-b border-sand/20">
+            <div className="flex items-center gap-5">
+              <span className="whitespace-nowrap">Над 95% позитивни отзиви</span>
+              <span className="hidden xl:inline">Обработваме поръчките веднага</span>
+              <span className="hidden xl:inline">SSL криптирана защита</span>
+            </div>
+            <a href="tel:+359887445101" className="font-medium hover:text-teal transition-colors">
+              Поръчай по телефон: 0887 445101
+            </a>
+          </div>
+
+          <nav className="relative w-full px-4 sm:px-6 lg:px-8">
+            {/* Mobile */}
+            <div className="flex items-center h-24 gap-3 lg:hidden">
+              <Link to="/" aria-label="Начало" className="flex items-center">
+                <img src={LOGO_URL} alt="Разкажи ни!" className="h-14 w-auto" />
+              </Link>
+
+              <div className="ml-auto flex items-center gap-2">
+                <button onClick={openCart} className="relative p-2 text-gray-700 hover:text-teal transition-colors" aria-label="Количка">
+                  <ShoppingBag className="h-6 w-6" />
+                  {totalQty > 0 && (
+                    <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
+                      className="absolute -top-1 -right-1 h-5 w-5 bg-teal text-white text-xs rounded-full flex items-center justify-center">
+                      {totalQty}
+                    </motion.span>
+                  )}
+                </button>
+
+                <button
+                  className="p-2 text-gray-700 hover:text-teal transition-colors"
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  aria-label={isMobileMenuOpen ? 'Затвори меню' : 'Отвори меню'}
+                >
+                  {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Desktop */}
+            <div className="hidden lg:grid grid-cols-[1fr_auto_1fr] items-center h-24">
+              {/* Left: Logo */}
+              <div className="justify-self-start">
+                <Link to="/" aria-label="Начало" className="flex items-center">
+                  <img src={LOGO_URL} alt="Разкажи ни!" className="h-20 w-auto" loading="eager" decoding="async" />
+                </Link>
+              </div>
+
+              {/* Center nav */}
+              <div className="justify-self-center nav-colus">
+                <div className="flex items-center gap-8 whitespace-nowrap">
+                  <div
+                    className="relative"
+                    onMouseEnter={() => setIsShopOpen(true)}
+                    onMouseLeave={() => setIsShopOpen(false)}
+                  >
+                    <button
+                      className={`relative text-xl xl:text-2xl tracking-wide px-2 py-1 transition-colors
+                        ${isShopOpen || isActive('/books') || isActive('/puppets') || isActive('/audio') || isActive('/shows')
+                          ? 'text-teal' : 'text-gray-800 hover:text-teal'}`}
+                      aria-haspopup="true"
+                      aria-expanded={isShopOpen}
+                      onClick={() => setIsShopOpen(v => !v)}
+                    >
+                      МАГАЗИН
+                      {isShopOpen && (
+                        <motion.div layoutId="activeTab" className="absolute -bottom-1 left-0 right-0 h-1 bg-teal rounded-full" />
+                      )}
+                    </button>
+
+                    <AnimatePresence>
+                      {isShopOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          className="absolute left-1/2 -translate-x-1/2 mt-3 w-[900px] xl:w-[1100px] 2xl:w-[1200px] max-w-[calc(100vw-3rem)] bg-white shadow-2xl rounded-2xl border border-sand/20 p-7 z-50"
+                          onMouseEnter={() => setIsShopOpen(true)}
+                          onMouseLeave={() => setIsShopOpen(false)}
+                        >
+                          <div className="grid grid-cols-3 xl:grid-cols-4 gap-8">
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Книги</p>
+                              <ul className="space-y-2">
+                                <li><Link to="/books/baba" className="block hover:text-teal">Бабо, разкажи ни! <span className="text-gray-500">— виж вътре</span></Link></li>
+                                <li><Link to="/books/dyado" className="block hover:text-teal">Дядо, разкажи ни! <span className="text-gray-500">— виж вътре</span></Link></li>
+                                <li><Link to="/books/bundles" className="block hover:text-teal">Комплекти / Промо −10%</Link></li>
+                                <li><Link to="/books" className="block text-sm text-gray-600 hover:text-teal">Всички книги</Link></li>
+                              </ul>
+                            </div>
+
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Кукли & Сцена</p>
+                              <ul className="space-y-2">
+                                <li><Link to="/puppets" className="block hover:text-teal">Ръчно изработени кукли</Link></li>
+                                <li><Link to="/shows" className="block hover:text-teal">Куклени спектакли</Link></li>
+                                <li><Link to="/puppets#popular" className="block text-sm text-gray-600 hover:text-teal">Най-търсени</Link></li>
+                              </ul>
+                            </div>
+
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Аудио приказки</p>
+                              <ul className="space-y-2 mb-3">
+                                <li><Link to="/audio" className="block hover:text-teal">Слушай у дома</Link></li>
+                                <li><Link to="/audio#demo" className="block hover:text-teal">Чуй демо (0:30)</Link></li>
+                              </ul>
+                            </div>
+
+                            <div className="hidden xl:block">
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Специално</p>
+                              <ul className="space-y-2">
+                                <li><Link to="/books/gift" className="block hover:text-teal">Подаръчни ваучери</Link></li>
+                                <li><Link to="/books/accessories" className="block hover:text-teal">Аксесоари</Link></li>
+                                <li><Link to="/books#best" className="block hover:text-teal">Най-продавани</Link></li>
+                              </ul>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  <Link to="/how-it-works" className={`relative text-xl xl:text-2xl tracking-wide px-2 py-1 transition-colors ${isActive('/how-it-works') ? 'text-teal' : 'text-gray-800 hover:text-teal'}`}>
+                    КАК РАБОТИ?
+                    {isActive('/how-it-works') && <motion.div layoutId="activeTab" className="absolute -bottom-1 left-0 right-0 h-1 bg-teal rounded-full" />}
+                  </Link>
+
+                  <Link to="/reviews" className={`relative text-xl xl:text-2xl tracking-wide px-2 py-1 transition-colors ${isActive('/reviews') ? 'text-teal' : 'text-gray-800 hover:text-teal'}`}>
+                    ОТЗИВИ
+                    {isActive('/reviews') && <motion.div layoutId="activeTab" className="absolute -bottom-1 left-0 right-0 h-1 bg-teal rounded-full" />}
+                  </Link>
+
+                  <Link to="/about" className={`relative text-xl xl:text-2xl tracking-wide px-2 py-1 transition-colors ${isActive('/about') ? 'text-teal' : 'text-gray-800 hover:text-teал'}`}>
+                    ЗА НАС
+                    {isActive('/about') && <motion.div layoutId="activeTab" className="absolute -bottom-1 left-0 right-0 h-1 bg-teal rounded-full" />}
+                  </Link>
+
+                  <Link to="/blog" className={`relative text-xl xl:text-2xl tracking-wide px-2 py-1 transition-colors ${isActive('/blog') ? 'text-teal' : 'text-gray-800 hover:text-teal'}`}>
+                    БЛОГ
+                    {isActive('/blog') && <motion.div layoutId="activeTab" className="absolute -bottom-1 left-0 right-0 h-1 bg-teal rounded-full" />}
+                  </Link>
+
+                  <Link to="/contact" className={`relative text-xl xl:text-2xl tracking-wide px-2 py-1 transition-colors ${isActive('/contact') ? 'text-teal' : 'text-gray-800 hover:text-teal'}`}>
+                    КОНТАКТ
+                    {isActive('/contact') && <motion.div layoutId="activeTab" className="absolute -bottom-1 left-0 right-0 h-1 bg-teal rounded-full" />}
+                  </Link>
+                </div>
+              </div>
+
+              {/* Right */}
+              <div className="justify-self-end flex items-center gap-3">
+                <Link to="/account" aria-label="Вход / Регистрация"
+                  className="inline-flex items-center justify-center p-2 rounded-full border border-sand/40 text-gray-700 hover:text-teal hover:border-teal transition"
+                  title="Вход / Регистрация">
+                  <User className="h-5 w-5" />
+                </Link>
+
+                <div className="relative" ref={langRef}>
+                  <button
+                    type="button" onClick={() => setIsLangOpen(v => !v)}
+                    aria-haspopup="menu" aria-expanded={isLangOpen} aria-label="Език"
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-sand/40 text-sm text-gray-700 hover:text-teal hover:border-teal transition"
+                  >
+                    <span className={`text-sm ${!isEN ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>BG</span>
+                    <span className="opacity-50">|</span>
+                    <span className={`text-sm ${isEN ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>EN</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${isLangOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <AnimatePresence>
+                    {isLangOpen && (
+                      <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                        role="menu" className="absolute right-0 mt-2 w-44 bg-white border border-sand/30 shadow-xl rounded-2xl p-1">
+                        <Link to="/" role="menuitem" onClick={() => setIsLangOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-sand/10">
+                          <span className="text-sm">BG — Български</span>
+                        </Link>
+                        <Link to="/en" role="menuitem" onClick={() => setIsLangOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-sand/10">
+                          <span className="text-sm">EN — English</span>
+                        </Link>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className="hidden lg:flex flex-col items-end leading-tight">
+                  <span className="text-sm font-semibold text-gray-800">{fmtBGN(totalBGN)}</span>
+                  <span className="text-xs text-gray-500">{fmtEUR(totalEUR)}</span>
+                </div>
+
+                <button onClick={openCart} className="relative p-2 text-gray-700 hover:text-teal transition-colors" aria-label="Количка">
+                  <ShoppingBag className="h-6 w-6" />
+                  {totalQty > 0 && (
+                    <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
+                      className="absolute -top-1 -right-1 h-5 w-5 bg-teal text-white text-xs rounded-full flex items-center justify-center">
+                      {totalQty}
+                    </motion.span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </nav>
+
+          {/* Floating search – скрита само на /books/baba */}
+          <div
+            className={`${
+              isProductDetailPage ? 'hidden' : 'hidden lg:block'
+            } absolute left-0 right-0 -bottom-14 pr-4 sm:pr-6 lg:pr-8 pointer-events-none`}
+          >
+            <form action="/search" className="relative flex justify-end pointer-events-auto">
+              <div className="relative">
+                <input
+                  type="search"
+                  name="q"
+                  aria-label="Търсене"
+                  placeholder="Търси: бабо, дядо, комплект…"
+                  className="w-[22rem] xl:w-[28rem] 2xl:w-[30rem] rounded-full border border-sand/40 px-5 py-3 pr-12 text-base outline-none focus:border-teal focus:ring-1 focus:ring-teal bg-white shadow-md"
+                />
+                <SearchIcon className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              </div>
+            </form>
+          </div>
+        </div>
+
+        {/* Mobile Overlay */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="lg:hidden fixed inset-0 z-50 bg-white">
+              <div className="pt-4 px-4 pb-24 overflow-y-auto">
+                <form action="/search" className="mb-4">
+                  <div className="relative">
+                    <input type="search" name="q" aria-label="Търсене" placeholder="Търси: бабо, дядо, комплект…"
+                      className="w-full rounded-full border border-sand/40 px-4 py-3 pr-10 text-base outline-none focus:border-teal focus:ring-1 focus:ring-teal" />
+                    <SearchIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                  </div>
+                </form>
+
+                <nav className="space-y-2">
+                  <p className="px-2 text-xs tracking-wider text-gray-500 uppercase">Магазин</p>
+                  <Link to="/books" onClick={() => setIsMobileMenuOpen(false)} className="block px-2 py-3 text-lg font-semibold">Книги</Link>
+                  <Link to="/books/bundles" onClick={() => setIsMobileMenuOpen(false)} className="block px-2 py-3 text-lg">Комплекти / Промо</Link>
+                  <Link to="/puppets" onClick={() => setIsMobileMenuOpen(false)} className="block px-2 py-3 text-lg">Ръчно изработени кукли</Link>
+                  <Link to="/shows" onClick={() => setIsMobileMenuOpen(false)} className="block px-2 py-3 text-lg">Куклени спектакли</Link>
+                  <Link to="/audio" onClick={() => setIsMobileMenuOpen(false)} className="block px-2 py-3 text-lg">Аудио приказки</Link>
+
+                  <p className="mt-4 px-2 text-xs tracking-wider text-gray-500 uppercase">Открий</p>
+                  <Link to="/how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="block px-2 py-3 text-lg">Как работи?</Link>
+                  <Link to="/reviews" onClick={() => setIsMobileMenuOpen(false)} className="block px-2 py-3 text-lg">Отзиви</Link>
+                  <Link to="/about" onClick={() => setIsMobileMenuOpen(false)} className="block px-2 py-3 text-lg">За нас</Link>
+                  <Link to="/blog" onClick={() => setIsMobileMenuOpen(false)} className="block px-2 py-3 text-lg">Блог</Link>
+                  <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="block px-2 py-3 text-lg">Контакт</Link>
+
+                  <div className="mt-6 flex items-center justify-between px-2">
+                    <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-sand/40">BG</Link>
+                    <Link to="/en" onClick={() => setIsMobileMenuOpen(false)} className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-sand/40">EN</Link>
+                  </div>
+                </nav>
+              </div>
+
+              <div className="fixed bottom-0 inset-x-0 bg-white border-t border-sand/20 px-4 py-3 flex items-center justify-between">
+                <button onClick={() => { setIsMobileMenuOpen(false); openCart(); }}
+                  className="inline-flex items-center gap-2 px-4 py-3 rounded-full border border-sand/40">
+                  <ShoppingBag className="w-5 h-5" />
+                  Количка
+                  {totalQty > 0 && (<span className="ml-1 inline-flex items-center justify-center min-w-5 h-5 px-2 rounded-full bg-teal text-white text-xs">{totalQty}</span>)}
+                </button>
+                <Link to="/checkout" onClick={() => setIsMobileMenuOpen(false)}
+                  className="inline-flex items-center rounded-full bg-teal text-white px-6 py-3 font-semibold">
+                  Поръчай
+                </Link>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </header>
+    </>
+  );
+};
+
+export default Header;
