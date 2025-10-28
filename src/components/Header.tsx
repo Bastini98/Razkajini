@@ -69,7 +69,7 @@ const Header: React.FC = () => {
             <div className="flex items-center gap-5">
               <span className="whitespace-nowrap">Над 95% позитивни отзиви</span>
               <span className="hidden xl:inline">Обработваме поръчките веднага</span>
-              <span className="hidden xl:inline">SSL криптирана защита</span>
+              <span className="hidden xl:inline">SSL криптирана защита</span> 
             </div>
             <a href="tel:+359887445101" className="font-medium hover:text-teal transition-colors">
               Поръчай по телефон: +359 887 445 101
